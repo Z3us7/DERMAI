@@ -211,14 +211,14 @@ export default function Scanner() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {results.predictions[0].confidence < 0.60 ? (
+          {results.predictions[0].confidence < 0.30 ? (
             <div className="glass-card bg-amber-50/80 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 space-y-4">
               <div className="flex items-center gap-3 text-amber-800 dark:text-amber-500">
                 <AlertCircle size={28} className="shrink-0" />
                 <h2 className="text-xl font-bold">Inconclusive Result</h2>
               </div>
               <p className="text-amber-900 dark:text-amber-200/80 text-sm leading-relaxed">
-                The condition in the image does not strongly match any disease in our current AI vocabulary (confidence is below 60%). Please consult a dermatologist for a professional medical evaluation.
+                The condition in the image does not strongly match any disease in our current AI vocabulary (confidence is below 30%). Please consult a dermatologist for a professional medical evaluation.
               </p>
             </div>
           ) : (
