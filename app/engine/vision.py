@@ -133,10 +133,15 @@ def _run_forward_pass(
         InferenceError: If the forward pass fails due to OOM or shape mismatch.
     """
     try:
-        input_tensor = input_tensor.to(device)
         with torch.no_grad():
-            # input_tensor is (5, 3, H, W) due to TTA
-            logits = model(input_tensor) # shape: (5, num_classes)
+            # Process TTA sequentially to prevent Out-Of-Memory (OOM) on 512MB RAM free-tier servers.
+            logits_list = []
+            for i in range(input_tensor.size(0)):
+                single_input = input_tensor[i:i+1].to(device)
+                single_logits = model(single_input)
+                logits_list.append(single_logits)
+            
+            logits = torch.cat(logits_list, dim=0) # shape: (5, num_classes)
             
             # Average the logits across all 5 augmented versions to get consensus
             mean_logits = torch.mean(logits, dim=0, keepdim=True) # shape: (1, num_classes)
