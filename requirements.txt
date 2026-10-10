@@ -1,0 +1,37 @@
+# ──────────────────────────────────────────────
+# DermAI Backend — Production Requirements
+# Python 3.10+  |  Generated per .roo/rules/04
+# ──────────────────────────────────────────────
+
+# ── ASGI Server & Framework ──────────────────
+fastapi[standard]==0.115.12
+uvicorn[standard]==0.34.3
+
+# ── ML / Vision ──────────────────────────────
+# CPU-only build; swap index URL for CUDA build
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0+cpu
+torchvision==0.28.0+cpu
+Pillow==11.2.1
+
+# ── Data validation ──────────────────────────
+pydantic==2.11.7
+pydantic-settings==2.10.1
+
+# ── File upload ───────────────────────────────
+python-multipart==0.0.20
+
+# ── LangChain RAG Engine ─────────────────────
+langchain==0.3.26
+langchain-core==0.3.67
+langchain-community==0.3.26
+langchain-openai==0.3.19
+
+# ── Testing (TDD — Rule 02) ──────────────────
+pytest==8.4.1
+pytest-asyncio==0.24.0
+httpx==0.28.1
+
+# ── Static Analysis (Rule 04) ────────────────
+ruff==0.12.4
+black==25.1.0
