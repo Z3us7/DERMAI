@@ -16,10 +16,10 @@ const CONDITIONS = [
     advice: 'URGENT: Requires immediate evaluation by a dermatologist. Look for asymmetric moles with irregular borders.'
   },
   {
-    name: 'Scabies',
-    category: 'Infectious',
-    description: 'An itchy skin condition caused by a tiny burrowing mite called Sarcoptes scabiei.',
-    advice: 'Requires prescription scabicides. All household members and close contacts should be treated simultaneously.'
+    name: 'Acne Vulgaris',
+    category: 'Inflammatory',
+    description: 'A very common skin condition that occurs when hair follicles plug with oil and dead skin cells.',
+    advice: 'Wash face gently twice daily, use non-comedogenic products, and consult a dermatologist for persistent cases.'
   },
   {
     name: 'Psoriasis',
@@ -32,6 +32,12 @@ const CONDITIONS = [
     category: 'Fungal',
     description: 'A common fungal infection of the skin. The fungus interferes with the normal pigmentation of the skin.',
     advice: 'Treated with over-the-counter or prescription antifungal creams, lotions, or shampoos.'
+  },
+  {
+    name: 'Nevus (Common Mole)',
+    category: 'Benign',
+    description: 'A common, harmless skin growth caused by a cluster of pigmented cells (melanocytes).',
+    advice: 'Monitor for any changes in size, shape, or color using the ABCDE rule. Protect from excessive sun exposure.'
   }
 ];
 
