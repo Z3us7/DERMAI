@@ -4,11 +4,15 @@ Welcome to your production-grade DermAI backend! This document contains everythi
 
 ## 🔗 Server Links
 
+**When running locally on your computer:**
 - **Main User Interface (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Alternative Documentation (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - **Health Check Endpoint:** [http://localhost:8000/health](http://localhost:8000/health)
 
-*(Note: The server must be running to access these links!)*
+*(Note: The server must be running on your machine to access the localhost links!)*
+
+**When deployed to production (e.g. Render):**
+- **Live User Interface:** `https://your-app-name.onrender.com/docs`
 
 ---
 
