@@ -5,9 +5,9 @@ Welcome to your production-grade DermAI backend! This document contains everythi
 ## 🔗 Server Links
 
 **When running locally on your computer:**
-- **Main User Interface (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Alternative Documentation (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **Health Check Endpoint:** [http://localhost:8000/health](http://localhost:8000/health)
+- **Main User Interface (Swagger UI):** 
+- **Alternative Documentation (ReDoc):** 
+- **Health Check Endpoint:** 
 
 *(Note: The server must be running on your machine to access the localhost links!)*
 
@@ -36,7 +36,7 @@ To **Stop** the server at any time, click on your terminal and press `CTRL + C`.
 
 FastAPI provides a beautiful, interactive web interface where you can test your model without writing any extra code.
 
-1. **Open the UI:** Go to [http://localhost:8000/docs](http://localhost:8000/docs) in your web browser.
+1. **Open the UI:** Go to [http://](http://) in your web browser.
 2. **Find the Endpoint:** You will see a green box labeled `POST /api/v1/analyze`. Click on it to expand it.
 3. **Try it Out:** Click the **"Try it out"** button in the top right corner of the expanded box.
 4. **Upload Image:** You will see a file upload button labeled `image`. Click **"Choose File"** and select a skin image (JPEG or PNG) from your computer.
