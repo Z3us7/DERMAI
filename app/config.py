@@ -78,6 +78,10 @@ class AppSettings(BaseSettings):
         default="gpt-4o-mini",
         description="LLM model identifier used by the RAG engine.",
     )
+    llm_base_url: str | None = Field(
+        default=None,
+        description="Optional Base URL to override the default OpenAI endpoint (e.g., for Groq, OpenRouter, TogetherAI).",
+    )
     rag_top_k_documents: int = Field(
         default=3,
         description="Number of documents retrieved from the simulated vector DB.",

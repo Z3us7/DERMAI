@@ -226,12 +226,16 @@ def _invoke_llm_synchronously(prompt: str) -> str:
         from langchain_core.messages import HumanMessage
         from langchain_openai import ChatOpenAI
 
-        llm = ChatOpenAI(
-            model=settings.llm_model_name,
-            api_key=settings.openai_api_key,
-            temperature=0.4,
-            max_tokens=512,
-        )
+        kwargs = {
+            "model": settings.llm_model_name,
+            "api_key": settings.openai_api_key,
+            "temperature": 0.4,
+            "max_tokens": 512,
+        }
+        if settings.llm_base_url:
+            kwargs["base_url"] = settings.llm_base_url
+
+        llm = ChatOpenAI(**kwargs)
         response = llm.invoke([HumanMessage(content=prompt)])
         return str(response.content)
     except Exception as exc:
@@ -257,12 +261,16 @@ def _invoke_vlm_synchronously(prompt: str, image_bytes: bytes) -> str:
         
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
 
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=settings.openai_api_key,
-            temperature=0.4,
-            max_tokens=512,
-        )
+        kwargs = {
+            "model": settings.llm_model_name, # Use configured model name instead of hardcoding gpt-4o-mini
+            "api_key": settings.openai_api_key,
+            "temperature": 0.4,
+            "max_tokens": 512,
+        }
+        if settings.llm_base_url:
+            kwargs["base_url"] = settings.llm_base_url
+
+        llm = ChatOpenAI(**kwargs)
         
         message = HumanMessage(
             content=[
