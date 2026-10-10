@@ -1,74 +1,77 @@
-# DermAI API Server — Operating Instructions
+# DermAI — Production Deployment Guide
 
-Welcome to your production-grade DermAI backend! This document contains everything you need to know about starting the server, accessing the User Interface (UI), and analyzing images.
+Welcome to the DermAI full-stack repository! This application is a complete, end-to-end medical AI platform featuring a React frontend, a FastAPI backend, a PyTorch computer vision engine, and a LangChain RAG pipeline.
 
-## 🔗 Server Links
+## 🌟 Architecture Overview
 
-**When running locally on your computer:**
-- **Main User Interface (Swagger UI):** 
-- **Alternative Documentation (ReDoc):** 
-- **Health Check Endpoint:** 
-
-*(Note: The server must be running on your machine to access the localhost links!)*
-
-**When deployed to production (e.g. Render):**
-- **Live User Interface:** `https://your-app-name.onrender.com/docs`
+1. **Frontend:** React + Vite, styled with Tailwind CSS and Framer Motion. Deployed on **Vercel**.
+2. **Backend:** Python + FastAPI. Deployed on **Render.com**.
+3. **Database & Auth:** PostgreSQL and Row Level Security powered by **Supabase**.
+4. **AI Engine (Vision):** Custom PyTorch EfficientNet-B3 model recognizing 121 skin conditions.
+5. **AI Engine (LLM):** LangChain RAG pipeline with OpenAI GPT-4o-mini to generate patient-friendly clinical notes.
 
 ---
 
-## 🚀 How to Start the Server
+## 🚀 Live URLs
 
-Whenever you want to start the API, open your **PowerShell** terminal, ensure you are in the `DermAI OG` directory, and run this exact command:
-
-```powershell
-.\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**You will know it is working when you see:**
-> `INFO: Application startup complete.`
-> `=== Model loaded in ... ms. API ready. ===`
-
-To **Stop** the server at any time, click on your terminal and press `CTRL + C`.
+- **Frontend Application:** (Add your Vercel URL here)
+- **Backend API (Swagger):** `https://dermai-backend-ugbd.onrender.com/docs`
+- **Database:** Supabase Project Dashboard
 
 ---
 
-## 🖥️ How to Use the UI (Test an Image)
+## 🛠️ Deployment Configuration (For Maintainers)
 
-FastAPI provides a beautiful, interactive web interface where you can test your model without writing any extra code.
+### 1. Render.com (Backend)
+The backend is hosted on a free Render Web Service. It requires the following specific configuration due to PyTorch's memory footprint:
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Environment Variables:**
+  - `PYTHON_VERSION`: `3.11.0` *(Required to prevent source-build OOM errors)*
+  - `MODEL_PATH`: `backend/DermAI_Mega_Payload.pth` *(Points to the model checkpoint directory)*
+  - `CORS_ALLOW_ORIGINS`: `["*"]` *(Update to your exact Vercel URL in production)*
+  - `OPENAI_API_KEY`: `sk-...` *(Your OpenAI key. If omitted, the server safely falls back to a deterministic Mock LLM mode)*
 
-1. **Open the UI:** Go to [http://](http://) in your web browser.
-2. **Find the Endpoint:** You will see a green box labeled `POST /api/v1/analyze`. Click on it to expand it.
-3. **Try it Out:** Click the **"Try it out"** button in the top right corner of the expanded box.
-4. **Upload Image:** You will see a file upload button labeled `image`. Click **"Choose File"** and select a skin image (JPEG or PNG) from your computer.
-5. **Execute:** Click the large blue **"Execute"** button below the file uploader.
-6. **View Results:** Scroll down slightly to the **"Server response"** section. You will see a JSON block containing your model's prediction, the confidence score, and the LLM's patient-friendly explanation!
+### 2. Supabase (Database & Auth)
+The database schema is fully automated via the `supabase_schema.sql` file. 
+- To initialize or reset the database, copy the contents of `supabase_schema.sql` and run it in the Supabase SQL Editor.
+- It handles creating the `profiles` table, the `scan_results` table, the `scan-images` storage bucket, and all necessary Row Level Security (RLS) policies.
 
----
+### 3. Vercel (Frontend)
+The frontend requires the following environment variables to connect to the backend and database:
+- `VITE_API_URL`: `https://dermai-backend-ugbd.onrender.com`
+- `VITE_SUPABASE_URL`: *(Your Supabase Project URL)*
+- `VITE_SUPABASE_ANON_KEY`: *(Your Supabase Anon Key)*
 
-## 🛠️ Other Useful Commands
-
-If you ever need to verify the code quality or run the test suite, use these commands in PowerShell:
-
-**Run all 51 automated tests:**
-```powershell
-.\venv\Scripts\python.exe -m pytest tests/ -v
-```
-
-**Run the Linter (checks for errors):**
-```powershell
-.\venv\Scripts\python.exe -m ruff check app/ tests/
-```
-
-**Format the code:**
-```powershell
-.\venv\Scripts\python.exe -m black app/ tests/
-```
+*Important:* You must add your Vercel deployment URL to the Supabase Authentication **URL Configuration** whitelist, or logins will be blocked.
 
 ---
 
-## 🤖 Activating the Real AI Explanations
+## 🤖 The LLM RAG Pipeline
 
-Right now, the LLM is providing a `[MOCK LLM RESPONSE]`. To activate real GPT-4 explanations:
-1. Open the `.env` file (create one by copying `.env.example` if you haven't already).
-2. Add your real OpenAI API key: `OPENAI_API_KEY=sk-...`
-3. Save the file. The server will automatically reload and start using the real AI!
+This application uses a LangChain Retrieval-Augmented Generation (RAG) pipeline to explain complex medical predictions to patients at a 6th-grade reading level.
+
+**Mock Mode Fallback:**
+If you do not provide an `OPENAI_API_KEY` in the Render environment variables, the backend will gracefully fallback to a deterministic Mock Mode. You will see `[MOCK LLM RESPONSE]` in the UI. This is intentional and proves the pipeline architecture works safely even when API quotas are exhausted or keys are missing.
+
+---
+
+## 💻 Local Development
+
+To run the backend locally:
+```powershell
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+To run the frontend locally:
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+### Code Quality Commands
+- **Run Tests:** `pytest tests/ -v`
+- **Run Linter:** `ruff check app/ tests/`
+- **Format Code:** `black app/ tests/`
