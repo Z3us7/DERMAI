@@ -195,9 +195,17 @@ async def analyze_image(
         prediction = await vision_engine.classify_image(image_bytes=raw_bytes)
         
         top_prediction = prediction.predictions[0]
-        patient_explanation, rag_context = await rag_engine.generate_patient_explanation(
-            disease_name=top_prediction.disease_name
-        )
+        
+        # Trigger VLM Cascade Fallback if confidence is low
+        if top_prediction.confidence < 0.40:
+            logger.info("Confidence %.2f < 0.40. Triggering VLM Cascade Fallback.", top_prediction.confidence)
+            patient_explanation, rag_context = await rag_engine.generate_vision_fallback_explanation(
+                image_bytes=raw_bytes
+            )
+        else:
+            patient_explanation, rag_context = await rag_engine.generate_patient_explanation(
+                disease_name=top_prediction.disease_name
+            )
 
         processing_time_ms = (time.perf_counter() - request_start_time) * 1000
 

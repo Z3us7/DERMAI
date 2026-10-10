@@ -20,6 +20,7 @@ Architecture (SRP breakdown):
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import textwrap
 
@@ -237,6 +238,48 @@ def _invoke_llm_synchronously(prompt: str) -> str:
         raise RagPipelineError(detail=str(exc)) from exc
 
 
+def _invoke_vlm_synchronously(prompt: str, image_bytes: bytes) -> str:
+    """
+    Invoke a Vision-Language Model (VLM) synchronously (runs inside a thread pool).
+    Converts image bytes to base64 and passes them to GPT-4o-mini.
+    """
+    if not settings.openai_api_key:
+        logger.warning("OPENAI_API_KEY not set. Using mock VLM response.")
+        return (
+            "[MOCK VLM FALLBACK RESPONSE]\n\n"
+            "I am simulating a Vision-Language Fallback because the primary AI was uncertain. "
+            "Please add an API key in your .env file to enable actual multi-modal image analysis."
+        )
+
+    try:
+        from langchain_core.messages import HumanMessage
+        from langchain_openai import ChatOpenAI
+        
+        encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+
+        llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            api_key=settings.openai_api_key,
+            temperature=0.4,
+            max_tokens=512,
+        )
+        
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
+                },
+            ]
+        )
+        
+        response = llm.invoke([message])
+        return str(response.content)
+    except Exception as exc:
+        raise RagPipelineError(detail=str(exc)) from exc
+
+
 # ── Public Engine Class ───────────────────────────────────────────────────────
 
 
@@ -285,4 +328,35 @@ class RagEngine:
         )
 
         logger.info("RAG pipeline complete for disease: %s", disease_name)
+        return patient_explanation, rag_context
+
+    async def generate_vision_fallback_explanation(
+        self,
+        image_bytes: bytes,
+    ) -> tuple[str, RagContext]:
+        """
+        Async entry point: generate an explanation using a multi-modal VLM fallback
+        when the primary local classifier is uncertain.
+        """
+        prompt = (
+            "You are a highly skilled medical AI assistant and dermatologist. "
+            "Our primary local classifier was uncertain about this skin image. "
+            "Please analyze the visual characteristics of this skin lesion, describe what you see, "
+            "and provide a differential diagnosis. Keep your response to 3-4 short paragraphs, "
+            "write at a 6th-grade reading level, be reassuring, and remind the patient that "
+            "this is an AI screening tool, not a medical diagnosis, and they should see a doctor."
+        )
+
+        patient_explanation = await asyncio.to_thread(
+            _invoke_vlm_synchronously,
+            prompt,
+            image_bytes,
+        )
+
+        rag_context = RagContext(
+            retrieved_documents=["(Vision-Language Model Fallback Triggered - No medical database used)"],
+            prompt_sent_to_llm=prompt,
+        )
+
+        logger.info("VLM fallback pipeline complete.")
         return patient_explanation, rag_context
