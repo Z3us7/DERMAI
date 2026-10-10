@@ -227,9 +227,6 @@ export default function Scanner() {
                 <img src={preview} className="w-24 h-24 rounded-xl object-cover shadow-sm border border-white/50 dark:border-slate-700" alt="Scanned" />
                 <div>
                   <h2 className="text-2xl font-bold text-stone-900/80 dark:text-white">{results.predictions[0].disease_name}</h2>
-                  <span className="inline-block mt-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-stone-800/70 dark:text-slate-300 rounded-md text-sm font-medium font-mono border border-slate-200 dark:border-slate-700">
-                    Confidence: {(results.predictions[0].confidence * 100).toFixed(1)}%
-                  </span>
                 </div>
               </div>
 
@@ -242,7 +239,6 @@ export default function Scanner() {
                     <div key={i}>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-stone-700/80 dark:text-slate-300 font-medium">{pred.disease_name}</span>
-                        <span className="text-stone-800/60 dark:text-slate-400">{(pred.confidence * 100).toFixed(1)}%</span>
                       </div>
                       <div className="h-2.5 w-full bg-slate-100/80 dark:bg-slate-800/80 rounded-full overflow-hidden shadow-inner">
                         <motion.div 
