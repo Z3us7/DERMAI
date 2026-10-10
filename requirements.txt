@@ -6,6 +6,7 @@
 # ── ASGI Server & Framework ──────────────────
 fastapi[standard]==0.115.12
 uvicorn[standard]==0.34.3
+gradio==4.44.1
 
 # ── ML / Vision ──────────────────────────────
 # CPU-only build; swap index URL for CUDA build
