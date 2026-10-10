@@ -1,11 +1,29 @@
 import React, { useState, useRef } from 'react';
-import { Camera, AlertCircle, RefreshCw, ChevronLeft, Info, Volume2, BookOpen, Check, Save } from 'lucide-react';
+import { Camera, AlertCircle, RefreshCw, ChevronLeft, Info, Volume2, BookOpen, Check, Save, Image as ImageIcon, Crop } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 80,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight
+    ),
+    mediaWidth,
+    mediaHeight
+  );
+}
 
 export default function Scanner() {
   const [file, setFile] = useState(null);
@@ -14,12 +32,20 @@ export default function Scanner() {
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
 
+  // Cropper states
+  const [imgSrc, setImgSrc] = useState('');
+  const imgRef = useRef(null);
+  const [crop, setCrop] = useState();
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [showCropper, setShowCropper] = useState(false);
+
   // Save-to-history state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -27,12 +53,76 @@ export default function Scanner() {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
     
-    setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
+    // Reset states
+    setFile(null);
+    setPreview(null);
     setResults(null);
     setError(null);
     setSaved(false);
     setSaveError(null);
+    setCrop(undefined);
+
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      setImgSrc(reader.result?.toString() || '');
+      setShowCropper(true);
+    });
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const onImageLoad = (e) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 1));
+  };
+
+  const confirmCrop = async () => {
+    if (!completedCrop || !imgRef.current) return;
+    
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    
+    const targetWidth = completedCrop.width * scaleX;
+    const targetHeight = completedCrop.height * scaleY;
+
+    if (targetWidth <= 0 || targetHeight <= 0) {
+       setShowCropper(false);
+       return;
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      targetWidth,
+      targetHeight,
+      0,
+      0,
+      targetWidth,
+      targetHeight
+    );
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const croppedFile = new File([blob], 'cropped-scan.jpg', { type: 'image/jpeg' });
+      setFile(croppedFile);
+      setPreview(URL.createObjectURL(blob));
+      setShowCropper(false);
+    }, 'image/jpeg');
+  };
+
+  const cancelCrop = () => {
+    setShowCropper(false);
+    setImgSrc('');
+    setFile(null);
+    setPreview(null);
   };
 
   const analyzeImage = async () => {
@@ -63,32 +153,25 @@ export default function Scanner() {
     }
   };
 
-  /** Upload image to Supabase Storage and save scan result to database */
   const saveScan = async () => {
     if (!results || !file || !user || saved) return;
     setSaving(true);
     setSaveError(null);
 
     try {
-      // 1. Upload image to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('scan-images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
       if (uploadError) throw uploadError;
 
-      // 2. Get the public URL for the uploaded image
       const { data: urlData } = supabase.storage
         .from('scan-images')
         .getPublicUrl(fileName);
 
-      // 3. Insert scan result into the database
       const { error: insertError } = await supabase
         .from('scan_results')
         .insert({
@@ -101,7 +184,6 @@ export default function Scanner() {
         });
 
       if (insertError) throw insertError;
-
       setSaved(true);
     } catch (err) {
       console.error('Save scan error:', err);
@@ -132,48 +214,134 @@ export default function Scanner() {
         <ChevronLeft size={18} className="mr-1" /> Back
       </Link>
 
+      {/* Cropper Modal */}
+      <AnimatePresence>
+        {showCropper && !!imgSrc && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-stone-50 dark:bg-slate-800/50">
+                <h3 className="font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                  <Crop size={18} className="text-amber-600 dark:text-amber-400" /> 
+                  Crop Image
+                </h3>
+                <p className="text-xs text-stone-500 dark:text-slate-400 font-medium">Focus on the affected skin area</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 flex justify-center bg-stone-900/5 dark:bg-black/50 min-h-[300px] items-center">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(_, percentCrop) => setCrop(percentCrop)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={1}
+                  circularCrop={false}
+                >
+                  <img
+                    ref={imgRef}
+                    alt="Crop me"
+                    src={imgSrc}
+                    onLoad={onImageLoad}
+                    className="max-h-[60vh] object-contain"
+                  />
+                </ReactCrop>
+              </div>
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-stone-50 dark:bg-slate-800/50">
+                <button 
+                  onClick={cancelCrop}
+                  className="px-5 py-2.5 rounded-xl font-medium text-stone-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmCrop}
+                  className="btn-premium !py-2.5 !px-6 flex items-center gap-2"
+                >
+                  <Check size={18} /> Confirm Crop
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {!results ? (
         <div className="space-y-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-stone-900/80 dark:text-white">Clinical Skin Scanner</h1>
-            <p className="text-stone-800/60 dark:text-slate-400 mt-2 text-sm">Please ensure good lighting and clear focus.</p>
+            <p className="text-stone-800/60 dark:text-slate-400 mt-2 text-sm">Ensure good lighting and crop close to the condition.</p>
           </div>
 
-          <motion.div 
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            className="glass-card !p-2 relative overflow-hidden group border-dashed border-2 border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-amber-600 hover:bg-stone-100/30 dark:hover:bg-stone-900/20 transition-colors cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="h-64 md:h-80 w-full rounded-2xl flex flex-col items-center justify-center overflow-hidden relative">
-              {preview ? (
-                <>
-                  <img src={preview} alt="Preview" className="w-full h-full object-contain bg-black/5 dark:bg-black/20 rounded-2xl" />
-                  {loading && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-md flex flex-col items-center justify-center z-10 rounded-2xl"
-                    >
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="w-20 h-20 rounded-full border-4 border-amber-600/30 border-t-amber-600 animate-spin mb-4 shadow-lg"
-                      />
-                      <p className="text-amber-800 dark:text-amber-400 font-semibold tracking-wider uppercase text-sm drop-shadow-md">Running AI Analysis...</p>
-                    </motion.div>
-                  )}
-                </>
-              ) : (
-                <div className="text-stone-800/50 flex flex-col items-center">
-                  <div className="w-16 h-16 bg-stone-200 dark:bg-stone-900/50 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Camera size={32} />
+          <div className="glass-card !p-4 relative">
+            {preview ? (
+              <div className="h-64 md:h-80 w-full rounded-2xl flex flex-col items-center justify-center overflow-hidden relative border border-slate-200 dark:border-slate-700">
+                <img src={preview} alt="Preview" className="w-full h-full object-contain bg-black/5 dark:bg-black/20 rounded-2xl" />
+                {loading && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-md flex flex-col items-center justify-center z-10 rounded-2xl"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      className="w-20 h-20 rounded-full border-4 border-amber-600/30 border-t-amber-600 animate-spin mb-4 shadow-lg"
+                    />
+                    <p className="text-amber-800 dark:text-amber-400 font-semibold tracking-wider uppercase text-sm drop-shadow-md">Running AI Analysis...</p>
+                  </motion.div>
+                )}
+                
+                {!loading && (
+                  <button 
+                    onClick={() => {
+                      setPreview(null);
+                      setFile(null);
+                    }}
+                    className="absolute top-3 right-3 bg-white/80 dark:bg-black/50 backdrop-blur text-stone-800 dark:text-white p-2 rounded-full hover:bg-white dark:hover:bg-slate-800 shadow-sm transition"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="h-48 md:h-64 rounded-2xl flex flex-col items-center justify-center border-dashed border-2 border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-amber-600 bg-stone-50/50 dark:bg-stone-900/20 hover:bg-stone-100/50 dark:hover:bg-stone-900/40 transition-colors group cursor-pointer"
+                >
+                  <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Camera size={28} />
                   </div>
-                  <span className="font-medium text-stone-800/70 dark:text-slate-400">Tap to Capture or Upload</span>
-                </div>
-              )}
-            </div>
+                  <span className="font-semibold text-stone-800/80 dark:text-slate-300 text-center px-2">Take a Photo</span>
+                </motion.button>
+
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-48 md:h-64 rounded-2xl flex flex-col items-center justify-center border-dashed border-2 border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-amber-600 bg-stone-50/50 dark:bg-stone-900/20 hover:bg-stone-100/50 dark:hover:bg-stone-900/40 transition-colors group cursor-pointer"
+                >
+                  <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <ImageIcon size={28} />
+                  </div>
+                  <span className="font-semibold text-stone-800/80 dark:text-slate-300 text-center px-2">Upload Image</span>
+                </motion.button>
+              </div>
+            )}
+
+            {/* Hidden Inputs */}
+            <input 
+              type="file" 
+              ref={cameraInputRef}
+              className="hidden" 
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange} 
+            />
             <input 
               type="file" 
               ref={fileInputRef}
@@ -181,7 +349,7 @@ export default function Scanner() {
               accept="image/jpeg,image/png"
               onChange={handleFileChange} 
             />
-          </motion.div>
+          </div>
 
           <div className="bg-stone-100/80 dark:bg-stone-900/30 backdrop-blur-sm text-blue-800 dark:text-blue-300 p-4 rounded-xl flex gap-3 text-sm border border-stone-200 dark:border-stone-800/50">
             <Info className="shrink-0 text-amber-700 dark:text-amber-400" size={20} />
