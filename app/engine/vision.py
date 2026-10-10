@@ -78,16 +78,27 @@ def _decode_image_bytes(raw_bytes: bytes) -> Image.Image:
 
 def _apply_transform(image: Image.Image) -> torch.Tensor:
     """
-    Apply the inference transform pipeline to a PIL image.
+    Apply the inference transform pipeline to a PIL image, generating multiple
+    augmented versions for Test-Time Augmentation (TTA).
 
     Args:
         image: A decoded PIL.Image.Image in RGB mode.
 
     Returns:
-        A normalised float32 tensor of shape (1, 3, 300, 300).
+        A normalised float32 tensor of shape (5, 3, 300, 300) containing TTA crops.
     """
-    tensor: torch.Tensor = _INFERENCE_TRANSFORM(image)
-    return tensor.unsqueeze(0)  # Add batch dimension
+    base_tensor: torch.Tensor = _INFERENCE_TRANSFORM(image)
+    
+    # Generate TTA variations (orientation-invariant for skin lesions)
+    tensors = [
+        base_tensor,
+        torch.flip(base_tensor, dims=[2]), # Horizontal flip
+        torch.flip(base_tensor, dims=[1]), # Vertical flip
+        torch.rot90(base_tensor, k=1, dims=[1, 2]), # Rotate 90 degrees
+        torch.rot90(base_tensor, k=3, dims=[1, 2]), # Rotate 270 degrees
+    ]
+    
+    return torch.stack(tensors)  # (5, 3, H, W)
 
 
 def _select_inference_device() -> torch.device:
@@ -124,8 +135,13 @@ def _run_forward_pass(
     try:
         input_tensor = input_tensor.to(device)
         with torch.no_grad():
-            logits = model(input_tensor)
-            probabilities = torch.nn.functional.softmax(logits, dim=1)
+            # input_tensor is (5, 3, H, W) due to TTA
+            logits = model(input_tensor) # shape: (5, num_classes)
+            
+            # Average the logits across all 5 augmented versions to get consensus
+            mean_logits = torch.mean(logits, dim=0, keepdim=True) # shape: (1, num_classes)
+            
+            probabilities = torch.nn.functional.softmax(mean_logits, dim=1)
             
             # Extract top K probabilities and their indices
             top_probs, top_indices = torch.topk(probabilities, k=top_k, dim=1)
