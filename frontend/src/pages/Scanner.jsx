@@ -379,74 +379,62 @@ export default function Scanner() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {results.predictions[0].confidence < 0.30 ? (
-            <div className="glass-card bg-amber-50/80 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 space-y-4">
-              <div className="flex items-center gap-3 text-amber-800 dark:text-amber-500">
-                <AlertCircle size={28} className="shrink-0" />
-                <h2 className="text-xl font-bold">Inconclusive Result</h2>
+          <>
+            <div className="glass-card flex gap-5 items-center">
+              <img src={preview} className="w-24 h-24 rounded-xl object-cover shadow-sm border border-white/50 dark:border-slate-700" alt="Scanned" />
+              <div>
+                <h2 className="text-2xl font-bold text-stone-900/80 dark:text-white">{results.predictions[0].disease_name}</h2>
               </div>
-              <p className="text-amber-900 dark:text-amber-200/80 text-sm leading-relaxed">
-                The condition in the image does not strongly match any disease in our current AI vocabulary (confidence is below 30%). Please consult a dermatologist for a professional medical evaluation.
+            </div>
+
+            <div className="glass-card space-y-5">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold text-stone-800/80 dark:text-slate-200 uppercase tracking-wider text-xs">Diagnostic Matches</h3>
+              </div>
+              <div className="space-y-4">
+                {results.predictions.map((pred, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-stone-700/80 dark:text-slate-300 font-medium">{pred.disease_name}</span>
+                    </div>
+                    <div className="h-2.5 w-full bg-slate-100/80 dark:bg-slate-800/80 rounded-full overflow-hidden shadow-inner">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pred.confidence * 100}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className={`h-full rounded-full ${i === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-card bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-100/50 dark:border-emerald-800/50 space-y-3 relative shadow-sm">
+               <button className="absolute top-4 right-4 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm hover:scale-105 transition border border-transparent dark:border-slate-700">
+                 <Volume2 size={18} />
+               </button>
+              <h3 className="font-semibold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider text-xs flex items-center gap-1">
+                <Info size={14} /> Clinical Note
+              </h3>
+              <p className="text-emerald-900 dark:text-emerald-100/80 text-sm leading-relaxed pr-8">
+                {results.patient_explanation}
               </p>
             </div>
-          ) : (
-            <>
-              <div className="glass-card flex gap-5 items-center">
-                <img src={preview} className="w-24 h-24 rounded-xl object-cover shadow-sm border border-white/50 dark:border-slate-700" alt="Scanned" />
-                <div>
-                  <h2 className="text-2xl font-bold text-stone-900/80 dark:text-white">{results.predictions[0].disease_name}</h2>
-                </div>
-              </div>
 
-              <div className="glass-card space-y-5">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-stone-800/80 dark:text-slate-200 uppercase tracking-wider text-xs">Diagnostic Matches</h3>
-                </div>
-                <div className="space-y-4">
-                  {results.predictions.map((pred, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-stone-700/80 dark:text-slate-300 font-medium">{pred.disease_name}</span>
-                      </div>
-                      <div className="h-2.5 w-full bg-slate-100/80 dark:bg-slate-800/80 rounded-full overflow-hidden shadow-inner">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pred.confidence * 100}%` }}
-                          transition={{ duration: 0.8, ease: "easeOut" }}
-                          className={`h-full rounded-full ${i === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="glass-card bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-100/50 dark:border-emerald-800/50 space-y-3 relative shadow-sm">
-                 <button className="absolute top-4 right-4 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm hover:scale-105 transition border border-transparent dark:border-slate-700">
-                   <Volume2 size={18} />
-                 </button>
-                <h3 className="font-semibold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider text-xs flex items-center gap-1">
-                  <Info size={14} /> Clinical Note
-                </h3>
-                <p className="text-emerald-900 dark:text-emerald-100/80 text-sm leading-relaxed pr-8">
-                  {results.patient_explanation}
-                </p>
-              </div>
-
-              {/* Next Steps Card */}
-              <div className="glass-card space-y-3">
-                <h3 className="font-semibold text-stone-800/80 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1">
-                  <BookOpen size={14} /> Next Steps
-                </h3>
-                <p className="text-stone-800/70 dark:text-slate-400 text-sm leading-relaxed">
-                  Based on this prediction, you can read more about standard care guidelines in our Skin Health Library. 
-                </p>
-                <Link to="/library" className="inline-flex items-center text-amber-700 dark:text-amber-400 text-sm font-medium hover:underline">
-                  Learn about {results.predictions[0].disease_name} &rarr;
-                </Link>
-              </div>
-            </>
-          )}
+            {/* Next Steps Card */}
+            <div className="glass-card space-y-3">
+              <h3 className="font-semibold text-stone-800/80 dark:text-slate-200 uppercase tracking-wider text-xs flex items-center gap-1">
+                <BookOpen size={14} /> Next Steps
+              </h3>
+              <p className="text-stone-800/70 dark:text-slate-400 text-sm leading-relaxed">
+                Based on this prediction, you can read more about standard care guidelines in our Skin Health Library. 
+              </p>
+              <Link to="/library" className="inline-flex items-center text-amber-700 dark:text-amber-400 text-sm font-medium hover:underline">
+                Learn about {results.predictions[0].disease_name} &rarr;
+              </Link>
+            </div>
+          </>
 
           {/* Save Error */}
           {saveError && (
