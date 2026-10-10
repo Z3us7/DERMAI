@@ -89,9 +89,14 @@ export default function Library() {
                 </p>
               </div>
             </div>
-            <button className="md:w-auto w-full flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400 font-medium px-4 py-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-900/20 transition">
+            <a 
+              href={`https://www.google.com/search?q=${encodeURIComponent(condition.name + ' skin condition')}`}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="md:w-auto w-full flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400 font-medium px-4 py-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-900/20 transition"
+            >
               Read More <ChevronRight size={18} />
-            </button>
+            </a>
           </div>
         ))}
         {filteredConditions.length === 0 && (
