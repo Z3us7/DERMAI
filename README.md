@@ -14,7 +14,7 @@ Welcome to the DermAI full-stack repository! This application is a complete, end
 
 ## 🚀 Live URLs
 
-- **Frontend Application:** (Add your Vercel URL here)
+- **Frontend Application:** https://dermai-gilt.vercel.app/
 - **Backend API (Swagger):** `https://dermai-backend-ugbd.onrender.com/docs`
 - **Database:** Supabase Project Dashboard
 
